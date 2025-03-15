@@ -5,5 +5,9 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': process.env
+  },
+  server: {
+    port: 5173,
+    strictPort: true // This prevents Vite from trying alternative ports
   }
 });

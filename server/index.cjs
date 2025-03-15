@@ -15,7 +15,7 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'xr',
-  password: 'post', // Replace with your PostgreSQL password
+  password: '1234', // Replace with your PostgreSQL password
   port: 5432,
 });
 
@@ -493,12 +493,22 @@ app.post('/api/submit-quiz', async (req, res) => {
 
     // Check if the score is 60% or above
     if (scorePercentage >= 60) {
-      // Mark the module as completed
-      await pool.query(
-        'INSERT INTO module_completion (user_id, module_id, completion_date) VALUES ($1, $2, CURRENT_DATE)',
+      // Check if the module is already marked as completed
+      const completionCheckResult = await pool.query(
+        'SELECT COUNT(*) AS completed FROM module_completion WHERE user_id = $1 AND module_id = $2',
         [userId, moduleId]
       );
-      console.log('Module marked as completed.');
+
+      if (completionCheckResult.rows[0].completed === 0) {
+        // Mark the module as completed
+        await pool.query(
+          'INSERT INTO module_completion (user_id, module_id, completion_date) VALUES ($1, $2, CURRENT_DATE)',
+          [userId, moduleId]
+        );
+        console.log('Module marked as completed.');
+      } else {
+        console.log('Module already marked as completed.');
+      }
 
       // Fetch the next module ID
       const nextModuleResult = await pool.query(

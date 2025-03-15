@@ -7,6 +7,7 @@ import NavButton from "./NavButton";
 import Button from "./Button";
 import Confetti from "react-confetti";
 import PopupModal from "./PopupModal"; // Import the PopupModal component
+import FeedbackForm from "./FeedbackForm"; // Make sure to import FeedbackForm component
 
 const GlobalStyle = styled.div`
   font-family: 'Poppins', sans-serif;
@@ -31,7 +32,7 @@ const NewQuizPage = () => {
   const [feedbackFormVisible, setFeedbackFormVisible] = useState(false);
   const [showPopup, setShowPopup] = useState(false); // State to control popup visibility
 
-  const userId = 1; // Replace with actual user ID from authentication
+  const userId = 2; // Replace with actual user ID from authentication
 
   useEffect(() => {
     const fetchQuizQuestions = async () => {
@@ -118,20 +119,20 @@ const NewQuizPage = () => {
       setError("Course ID is not available. Please try again later.");
       return;
     }
-
+  
     let correctAnswersCount = 0;
     quizQuestions.forEach((question) => {
       if (userAnswers[question.id] === question.correct_answer) {
         correctAnswersCount++;
       }
     });
-
+  
     const totalQuestions = quizQuestions.length;
     const scorePercentage = (correctAnswersCount / totalQuestions) * 100;
     setScore(scorePercentage);
-
+  
     setQuizSubmitted(true);
-
+  
     if (scorePercentage >= passingScore * 100) {
       try {
         const response = await fetch(`http://localhost:3000/api/submit-quiz`, {
@@ -145,16 +146,16 @@ const NewQuizPage = () => {
             answers: userAnswers,
           }),
         });
-
+  
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
+  
         const data = await response.json();
         if (data.success) {
           setNextModuleId(data.nextModuleId);
-          if (data.nextModuleId === null) {
-            setFeedbackFormVisible(true);
+          if (data.nextModuleId === null && data.showFeedback) {
+            setFeedbackFormVisible(true); // Show feedback form
           }
         } else {
           setError("Error fetching next module ID.");
@@ -164,7 +165,7 @@ const NewQuizPage = () => {
         setError(error.message);
       }
     }
-
+  
     // Show the popup after quiz submission
     setShowPopup(true);
   };
@@ -176,15 +177,23 @@ const NewQuizPage = () => {
     setShowPopup(false); // Hide the popup when retaking the quiz
   };
 
+  // Updated handleClosePopup function
   const handleClosePopup = () => {
     setShowPopup(false);
     if (nextModuleId) {
       navigate(`/aloepage/${nextModuleId}`, { 
-        state: { fromApp: true }, // Add this state
+        state: { fromApp: true },
         replace: true 
       });
     }
   };
+
+  // New function to handle showing the feedback form
+  const handleShowFeedback = () => {
+    setShowPopup(false);
+    setFeedbackFormVisible(true);
+  };
+
   if (loading) {
     return <Loader />;
   }
@@ -308,16 +317,34 @@ const NewQuizPage = () => {
           </QuizCardContainer>
         )}
 
-        {/* Popup Modal */}
-        {quizSubmitted && (
-          <PopupModal
-            isOpen={showPopup}
-            onClose={handleClosePopup}
-            score={score}
-            passed={score >= passingScore * 100}
-            onRetake={handleRetake}
-          />
-        )}
+{quizSubmitted && (
+  <PopupModal
+    isOpen={showPopup}
+    onClose={handleClosePopup}
+    score={score}
+    passed={score >= passingScore * 100}
+    onRetake={handleRetake}
+    showFeedback={nextModuleId === null && score >= passingScore * 100} // Ensure this is correctly set
+    onFeedback={() => {
+      setShowPopup(false);
+      setFeedbackFormVisible(true);
+    }}
+  />
+)}
+
+{feedbackFormVisible && (
+  <FeedbackForm 
+    courseId={courseId}
+    userId={userId}
+    onClose={() => setFeedbackFormVisible(false)}
+    onSubmit={() => {
+      // Handle feedback submission logic here
+      setFeedbackFormVisible(false);
+      // You might want to navigate somewhere else after feedback submission
+      navigate('/');
+    }}
+  />
+)}
       </PageContainer>
     </GlobalStyle>
   );
